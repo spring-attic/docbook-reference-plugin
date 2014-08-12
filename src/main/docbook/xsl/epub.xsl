@@ -24,7 +24,7 @@ under the License.
 		exclude-result-prefixes="xslthl"
 		version='1.0'>
 
-	<xsl:import href="urn:docbkx:stylesheet"/>
+	<xsl:import href="http://docbook.sourceforge.net/release/xsl/current/epub3/chunk.xsl"/>
 	<xsl:import href="common.xsl"/>
 
 </xsl:stylesheet>

@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import java.io.File;
 import java.util.zip.*
 
 import javax.xml.parsers.SAXParserFactory
 import javax.xml.transform.*
+import javax.xml.transform.Transformer;
 import javax.xml.transform.sax.SAXResult
 import javax.xml.transform.sax.SAXSource
 import javax.xml.transform.stream.StreamResult
@@ -45,15 +47,17 @@ class DocbookReferencePlugin implements Plugin<Project> {
 		def multi = tasks.create("referenceHtmlMulti", HtmlMultiDocbookReferenceTask)
 		def single = tasks.create("referenceHtmlSingle", HtmlSingleDocbookReferenceTask)
 		def pdf = tasks.create("referencePdf", PdfDocbookReferenceTask)
+		def epub = tasks.create("referenceEpub", EpubDocbookReferenceTask)
 
 		def reference = tasks.create("reference") {
 			group = 'Documentation'
 			description = "Generates HTML and PDF reference documentation."
-			dependsOn([multi, single, pdf])
+			dependsOn([multi, single, pdf, epub])
 
 			ext.sourceDir = null // e.g. new File('src/reference')
 			ext.outputDir = new File(project.buildDir, "reference")
 			ext.pdfFilename = "${project.rootProject.name}-reference.pdf"
+			ext.epubFilename = "${project.rootProject.name}-reference.epub"
 			ext.sourceFileName = 'index.xml'
 			ext.expandPlaceholders = '**/index.xml'
 			ext.fopUserConfig = null
@@ -64,14 +68,17 @@ class DocbookReferencePlugin implements Plugin<Project> {
 			if (multi.sourceDir == null) multi.sourceDir = reference.sourceDir
 			if (single.sourceDir == null) single.sourceDir = reference.sourceDir
 			if (pdf.sourceDir == null) pdf.sourceDir = reference.sourceDir
+			if (epub.sourceDir == null) epub.sourceDir = reference.sourceDir
 
 			if (multi.outputDir == null) multi.outputDir = reference.outputDir
 			if (single.outputDir == null) single.outputDir = reference.outputDir
 			if (pdf.outputDir == null) pdf.outputDir = reference.outputDir
+			if (epub.outputDir == null) epub.outputDir = reference.outputDir
 
 			if (multi.sourceFileName == null) multi.sourceFileName = reference.sourceFileName
 			if (single.sourceFileName == null) single.sourceFileName = reference.sourceFileName
 			if (pdf.sourceFileName == null) pdf.sourceFileName = reference.sourceFileName
+			if (epub.sourceFileName == null) epub.sourceFileName = reference.sourceFileName
 		}
 
 	}
@@ -154,7 +161,7 @@ abstract class AbstractDocbookReferenceTask extends DefaultTask {
 	}
 
 	protected void postTransform(File outputFile) {
-		copyImages(project, xdir)
+		copyImages(project, "${project.buildDir}/reference/${xdir}/images")
 		copyCss(project, xdir)
 	}
 
@@ -217,26 +224,28 @@ abstract class AbstractDocbookReferenceTask extends DefaultTask {
 		}
 	}
 
-	private void copyFile(InputStream source, File destFile) {
+	static void copyFile(InputStream source, File destFile) {
 		destFile.createNewFile();
-		FileOutputStream to = null;
+		copy(source, new FileOutputStream(destFile), true);
+	}
+
+	static void copy(InputStream source, OutputStream destination, boolean closeDestination) {
 		try {
-			to = new FileOutputStream(destFile);
 			byte[] buffer = new byte[4096];
 			int bytesRead;
-
 			while ((bytesRead = source.read(buffer)) > 0) {
-				to.write(buffer, 0, bytesRead);
+				destination.write(buffer, 0, bytesRead);
 			}
 		} finally {
 			if (source != null) {
 				source.close();
 			}
-			if (to != null) {
-				to.close();
+			if (destination != null && closeDestination) {
+				destination.close();
 			}
 		}
 	}
+
 
 	// for some reason, statically typing the return value leads to the following
 	// error when Gradle tries to subclass the task class at runtime:
@@ -266,22 +275,18 @@ abstract class AbstractDocbookReferenceTask extends DefaultTask {
 		return manager;
 	}
 
-	protected String copyImages(def project, def dir) {
-		def targetPath = "${project.buildDir}/reference/${dir}/images"
-
+	protected void copyImages(def project, def dir) {
 		// copy plugin provided resources first
 		project.copy {
-			into targetPath
+			into dir
 			from "${project.buildDir}/docbook-resources/images"
 		}
 
 		// allow for project provided resources to override
 		project.copy {
-			into targetPath
+			into dir
 			from "${sourceDir}/images"
 		}
-
-		return targetPath;
 	}
 
 	protected String copyCss(def project, def dir) {
@@ -359,7 +364,8 @@ class PdfDocbookReferenceTask extends AbstractDocbookReferenceTask {
 	 */
 	@Override
 	protected void postTransform(File foFile) {
-		String imagesPath = copyImages(project, xdir)
+		String imagesPath = "${project.buildDir}/reference/${xdir}/images"
+		copyImages(project, imagesPath)
 
 		FopFactory fopFactory = FopFactory.newInstance();
 		if (project.reference.fopUserConfig != null) {
@@ -417,3 +423,83 @@ class PdfDocbookReferenceTask extends AbstractDocbookReferenceTask {
 
 }
 
+
+class EpubDocbookReferenceTask extends AbstractDocbookReferenceTask {
+
+	public EpubDocbookReferenceTask() {
+		setDescription('Generates EPUB reference documentation.')
+		stylesheet = "epub.xsl"
+		xdir = 'epub'
+	}
+
+	@Override
+	protected String getExtension() {
+		return 'epub'
+	}
+
+	@Override
+	protected void preTransform(Transformer transformer, File sourceFile, File outputFile) {
+		def workDir = new File("${project.buildDir}/reference-epub-work");
+		workDir.mkdirs();
+		String rootFilename = outputFile.getName();
+		File images = new File(workDir, "images")
+		images.mkdirs();
+		copyImages(project, images)
+		rootFilename = rootFilename.substring(0, rootFilename.lastIndexOf('.'));
+		transformer.setParameter("root.filename", rootFilename);
+		transformer.setParameter("base.dir", workDir.getPath() + File.separator);
+		transformer.setParameter("epub.package.dir",  workDir.getPath() + File.separator);
+		transformer.setParameter("epub.metainf.dir", File.separator + "META-INF" + File.separator);
+		transformer.setParameter("chunk.base.dir", workDir.getPath() + File.separator);
+		transformer.setParameter("epub.package.filename", "content.opf");
+	}
+
+	@Override
+	protected void postTransform(File outputFile) {
+		File workDir = new File("${project.buildDir}/reference-epub-work");
+		InputStream container = getClass().getResourceAsStream("/epub/container.epub3.xml");
+		copyFile(container, new File(workDir, "META-INF" + File.separator + "container.xml"));
+		byte [] mimetypeData = "application/epub+zip".getBytes ("UTF-8");
+		final File mimetype = new File(workDir, "mimetype");
+
+		// Delete any existing file
+		mimetype.delete ();
+
+		ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(
+			new File(outputFile.parent, project.reference.epubFilename)));
+
+		// Write the mimetype entry first
+		CRC32 crc = new CRC32 ();
+		crc.update(mimetypeData);
+		ZipEntry entry = new ZipEntry ("mimetype");
+		entry.setMethod(ZipEntry.STORED);
+		entry.setSize(mimetypeData.length );
+		entry.setCrc(crc.getValue ());
+		zip.putNextEntry(entry);
+		zip.write(mimetypeData);
+		zip.closeEntry();
+
+		// Write the contents
+		writeZip(zip, "", workDir)
+
+		zip.close();
+	}
+
+	private void writeZip(ZipOutputStream zip, String prefix, File dir) {
+		File[] files = dir.listFiles();
+		for(File file in files) {
+			if(file.isFile()) {
+				FileInputStream inputStream = new FileInputStream(file);
+				zip.putNextEntry(new ZipEntry(prefix + file.getName()));
+				copy(inputStream, zip, false);
+				zip.closeEntry();
+			}
+			if(file.isDirectory() && !file.getName().startsWith('.')) {
+				zip.putNextEntry(new ZipEntry(prefix + file.getName() + "/"));
+				zip.closeEntry();
+				writeZip(zip, prefix + file.getName() + "/", file);
+			}
+		}
+	}
+
+}
