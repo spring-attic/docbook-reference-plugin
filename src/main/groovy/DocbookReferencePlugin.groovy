@@ -146,7 +146,7 @@ abstract class AbstractDocbookReferenceTask extends DefaultTask {
 		Transformer transformer = transformerFactory.newTransformer(source)
 
 		transformer.setParameter("highlight.source", "1")
-		transformer.setParameter("highlight.xslthl.config", new File("${project.buildDir}/docbook-resources/highlighting", "xslthl-config.xml").toURI().toURL())
+		transformer.setParameter("highlight.xslthl.config", new File("${project.buildDir}/docbook-resources/xsl", "xslthl-config.xml").toURI().toURL())
 
 		preTransform(transformer, srcFile, outputFile)
 
