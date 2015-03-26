@@ -9,7 +9,7 @@ follows, using [spring-framework/build.gradle][2] as an example:
 ```groovy
 buildscript {
     repositories {
-        maven { url 'http://repo.springsource.org/plugins-release' }
+        maven { url 'http://repo.spring.io/plugins-release' }
     }
     dependencies {
         classpath 'io.spring.gradle:docbook-reference-plugin:0.3.0'
