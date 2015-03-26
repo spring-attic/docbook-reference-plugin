@@ -403,7 +403,7 @@ class PdfDocbookReferenceTask extends AbstractDocbookReferenceTask {
 		}
 
 		if (!project.delete(imagesPath)) {
-		  logger.warn("Failed to delete 'images' path " + imagesPath)
+			logger.warn("Failed to delete 'images' path " + imagesPath)
 		}
 	}
 
