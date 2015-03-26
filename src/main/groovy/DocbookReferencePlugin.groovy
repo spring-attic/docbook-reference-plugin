@@ -390,16 +390,6 @@ class PdfDocbookReferenceTask extends AbstractDocbookReferenceTask {
 
 			Result res = new SAXResult(fop.getDefaultHandler())
 
-			switch (project.gradle.startParameter.logLevel) {
-				case LogLevel.DEBUG:
-				case LogLevel.INFO:
-					break
-				default:
-					// only show verbose fop output if the user has specified 'gradle -d' or 'gradle -i'
-					LoggerFactory.getILoggerFactory().getLogger('org.apache.fop').level =
-						LoggerFactory.getILoggerFactory().getLogger('ROOT').level.class.ERROR
-			}
-
 			transformer.transform(src, res)
 
 		} finally {
