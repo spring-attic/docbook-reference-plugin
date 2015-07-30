@@ -32,6 +32,9 @@ configure(rootproject) {
 
         // Configure which files have ${} expanded
         expandPlaceholders = '**/index.xml, **/other.xml'
+        
+        // Delete the index.fo after creating PDF
+        retainFo = false
     }
 
     task docsZip(type: Zip) {
