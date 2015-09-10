@@ -61,6 +61,7 @@ class DocbookReferencePlugin implements Plugin<Project> {
 			ext.sourceFileName = 'index.xml'
 			ext.expandPlaceholders = '**/index.xml'
 			ext.fopUserConfig = null
+			ext.retainFo = false
 			outputs.dir outputDir
 		}
 
@@ -398,7 +399,7 @@ class PdfDocbookReferenceTask extends AbstractDocbookReferenceTask {
 			}
 		}
 
-		if (!foFile.delete()) {
+		if (!project.reference.retainFo && !foFile.delete()) {
 			logger.warn("Failed to delete 'fo' file " + foFile)
 		}
 
