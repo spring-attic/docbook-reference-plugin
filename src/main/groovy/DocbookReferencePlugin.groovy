@@ -361,7 +361,7 @@ class PdfDocbookReferenceTask extends AbstractDocbookReferenceTask {
 	}
 
 	/**
-	 * <a href="http://xmlgraphics.apache.org/fop/0.95/embedding.html#render">From the FOP usage guide</a>
+	 * <a href="https://xmlgraphics.apache.org/fop/0.95/embedding.html#render">From the FOP usage guide</a>
 	 */
 	@Override
 	protected void postTransform(File foFile) {
