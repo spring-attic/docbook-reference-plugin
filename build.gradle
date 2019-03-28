@@ -5,7 +5,7 @@ apply plugin: 'maven'
 
 repositories {
     maven { url 'https://repo.spring.io/libs-release' }
-    mavenCentral()
+    maven { url 'https://repo.maven.apache.org/maven2/' }
 }
 
 group = 'io.spring.gradle'
