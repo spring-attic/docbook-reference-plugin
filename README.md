@@ -1,3 +1,6 @@
+# This repository is no longer actively maintained by VMware, Inc.
+
+
 ## DocBook Plugin for Gradle
 Small plugin used internally by the Spring Team to create documentation from docbook
 sources.
